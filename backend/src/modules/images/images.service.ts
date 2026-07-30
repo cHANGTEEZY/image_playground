@@ -1,34 +1,12 @@
-import { removeBackground } from "@imgly/background-removal-node";
 import sharp from "sharp";
+import { removeBackgroundHighQuality } from "./background-removal";
 import {
-  MAX_IMAGE_EDGE,
   type CropInput,
   type ProcessedImage,
 } from "./images.types";
 
 async function toBuffer(file: File): Promise<Buffer> {
   return Buffer.from(await file.arrayBuffer());
-}
-
-async function downscaleIfNeeded(input: Buffer): Promise<Buffer> {
-  const image = sharp(input, { failOn: "none" });
-  const meta = await image.metadata();
-  const width = meta.width ?? 0;
-  const height = meta.height ?? 0;
-
-  if (width <= MAX_IMAGE_EDGE && height <= MAX_IMAGE_EDGE) {
-    return input;
-  }
-
-  return image
-    .resize({
-      width: MAX_IMAGE_EDGE,
-      height: MAX_IMAGE_EDGE,
-      fit: "inside",
-      withoutEnlargement: true,
-    })
-    .png()
-    .toBuffer();
 }
 
 function baseName(filename: string): string {
@@ -39,22 +17,7 @@ function baseName(filename: string): string {
 export const imagesService = {
   async removeBackground(file: File): Promise<ProcessedImage> {
     const original = await toBuffer(file);
-    const prepared = await downscaleIfNeeded(original);
-
-    const blob = await removeBackground(
-      new Blob([new Uint8Array(prepared)], {
-        type: file.type || "image/png",
-      }),
-      {
-        model: "small",
-        output: {
-          format: "image/png",
-          quality: 0.9,
-        },
-      },
-    );
-
-    const buffer = Buffer.from(await blob.arrayBuffer());
+    const buffer = await removeBackgroundHighQuality(original);
 
     return {
       buffer,

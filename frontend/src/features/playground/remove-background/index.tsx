@@ -38,7 +38,7 @@ export default function RemoveBackgroundPage() {
     <div className="space-y-6">
       <PlaygroundPageHeader
         title="Remove Background"
-        description="Upload a photo and remove the background on the server with AI (sharp + ONNX)."
+        description="Upload a photo and remove the background with high-quality AI segmentation (IS-Net medium model, Lanczos mask upscaling)."
       />
 
       <div className="grid gap-6 lg:grid-cols-2">
