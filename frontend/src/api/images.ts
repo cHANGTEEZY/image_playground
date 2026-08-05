@@ -2,6 +2,8 @@ import { api, ApiError } from "@/lib/apiClient";
 import { ENDPOINTS } from "./endpoints";
 import type { AxiosError } from "axios";
 
+export type OutputFormat = "png" | "jpeg" | "webp" | "avif";
+
 export type CropPayload = {
   file: File;
   left: number;
@@ -9,6 +11,79 @@ export type CropPayload = {
   width: number;
   height: number;
   format?: "png" | "jpeg" | "webp";
+  onProgress?: (percent: number) => void;
+};
+
+export type ResizePayload = {
+  file: File;
+  width?: number;
+  height?: number;
+  fit?: "cover" | "contain" | "fill" | "inside" | "outside";
+  format?: OutputFormat;
+  onProgress?: (percent: number) => void;
+};
+
+export type ConvertPayload = {
+  file: File;
+  format: OutputFormat;
+  quality?: number;
+  onProgress?: (percent: number) => void;
+};
+
+export type RotatePayload = {
+  file: File;
+  degrees?: number;
+  flip?: boolean;
+  flop?: boolean;
+  format?: OutputFormat;
+  onProgress?: (percent: number) => void;
+};
+
+export type ExifMetadata = {
+  width: number | null;
+  height: number | null;
+  format: string | null;
+  space: string | null;
+  hasAlpha: boolean;
+  orientation: number | null;
+  density: number | null;
+  sizeBytes: number;
+  exif: Record<string, unknown> | null;
+};
+
+export type BackgroundReplacePayload = {
+  file: File;
+  mode: "color" | "blur" | "image";
+  color?: string;
+  blurSigma?: number;
+  backgroundFile?: File;
+  extraAccurate?: boolean;
+  onProgress?: (percent: number) => void;
+};
+
+export type WatermarkPosition =
+  | "top-left"
+  | "top-center"
+  | "top-right"
+  | "middle-left"
+  | "center"
+  | "middle-right"
+  | "bottom-left"
+  | "bottom-center"
+  | "bottom-right";
+
+export type WatermarkPayload = {
+  file: File;
+  type: "text" | "logo";
+  text?: string;
+  fontSize?: number;
+  color?: string;
+  logoFile?: File;
+  position: WatermarkPosition;
+  opacity: number;
+  scale: number;
+  margin: number;
+  tile: boolean;
   onProgress?: (percent: number) => void;
 };
 
@@ -90,9 +165,14 @@ async function postImageBlob(
 }
 
 export const imagesApi = {
-  removeBackground: (file: File, onProgress?: (percent: number) => void) => {
+  removeBackground: (
+    file: File,
+    onProgress?: (percent: number) => void,
+    extraAccurate?: boolean,
+  ) => {
     const form = new FormData();
     form.append("file", file);
+    if (extraAccurate) form.append("extraAccurate", "true");
     return postImageBlob(
       ENDPOINTS.images.removeBackground,
       form,
@@ -118,5 +198,102 @@ export const imagesApi = {
     form.append("height", String(Math.round(height)));
     form.append("format", format);
     return postImageBlob(ENDPOINTS.images.crop, form, 60_000, onProgress);
+  },
+
+  resize: ({ file, width, height, fit, format, onProgress }: ResizePayload) => {
+    const form = new FormData();
+    form.append("file", file);
+    if (width) form.append("width", String(Math.round(width)));
+    if (height) form.append("height", String(Math.round(height)));
+    if (fit) form.append("fit", fit);
+    if (format) form.append("format", format);
+    return postImageBlob(ENDPOINTS.images.resize, form, 60_000, onProgress);
+  },
+
+  convert: ({ file, format, quality, onProgress }: ConvertPayload) => {
+    const form = new FormData();
+    form.append("file", file);
+    form.append("format", format);
+    if (quality !== undefined) form.append("quality", String(Math.round(quality)));
+    return postImageBlob(ENDPOINTS.images.convert, form, 60_000, onProgress);
+  },
+
+  rotate: ({ file, degrees, flip, flop, format, onProgress }: RotatePayload) => {
+    const form = new FormData();
+    form.append("file", file);
+    if (degrees !== undefined) form.append("degrees", String(degrees));
+    if (flip) form.append("flip", "true");
+    if (flop) form.append("flop", "true");
+    if (format) form.append("format", format);
+    return postImageBlob(ENDPOINTS.images.rotate, form, 60_000, onProgress);
+  },
+
+  exif: async (file: File): Promise<ExifMetadata> => {
+    const form = new FormData();
+    form.append("file", file);
+    const res = await api.upload<{ success: boolean; data: ExifMetadata }>(
+      ENDPOINTS.images.exif,
+      form,
+    );
+    return res.data;
+  },
+
+  stripExif: (file: File, onProgress?: (percent: number) => void) => {
+    const form = new FormData();
+    form.append("file", file);
+    return postImageBlob(ENDPOINTS.images.exifStrip, form, 60_000, onProgress);
+  },
+
+  replaceBackground: ({
+    file,
+    mode,
+    color,
+    blurSigma,
+    backgroundFile,
+    extraAccurate,
+    onProgress,
+  }: BackgroundReplacePayload) => {
+    const form = new FormData();
+    form.append("file", file);
+    form.append("mode", mode);
+    if (color) form.append("color", color);
+    if (blurSigma !== undefined) form.append("blurSigma", String(blurSigma));
+    if (backgroundFile) form.append("backgroundFile", backgroundFile);
+    if (extraAccurate) form.append("extraAccurate", "true");
+    return postImageBlob(
+      ENDPOINTS.images.replaceBackground,
+      form,
+      120_000,
+      onProgress,
+    );
+  },
+
+  watermark: ({
+    file,
+    type,
+    text,
+    fontSize,
+    color,
+    logoFile,
+    position,
+    opacity,
+    scale,
+    margin,
+    tile,
+    onProgress,
+  }: WatermarkPayload) => {
+    const form = new FormData();
+    form.append("file", file);
+    form.append("type", type);
+    if (text) form.append("text", text);
+    if (fontSize !== undefined) form.append("fontSize", String(fontSize));
+    if (color) form.append("color", color);
+    if (logoFile) form.append("logoFile", logoFile);
+    form.append("position", position);
+    form.append("opacity", String(opacity));
+    form.append("scale", String(scale));
+    form.append("margin", String(margin));
+    if (tile) form.append("tile", "true");
+    return postImageBlob(ENDPOINTS.images.watermark, form, 60_000, onProgress);
   },
 };

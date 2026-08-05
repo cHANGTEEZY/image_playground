@@ -11,6 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { PlaygroundPageHeader } from "../components/page-header";
 import { svgToExpoComponent } from "./svg-to-expo";
 
@@ -75,12 +76,12 @@ export default function SvgPlaygroundPage() {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="svg-source">SVG code</Label>
-              <textarea
+              <Textarea
                 id="svg-source"
                 value={svgCode}
                 onChange={(e) => setSvgCode(e.target.value)}
                 spellCheck={false}
-                className="min-h-64 w-full rounded-md border border-input bg-background px-3 py-2 font-mono text-xs leading-relaxed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="min-h-64 font-mono text-xs leading-relaxed"
               />
             </div>
             <div className="flex flex-wrap gap-2">

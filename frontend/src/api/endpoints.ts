@@ -8,27 +8,16 @@
  *    the static entries.
  */
 export const ENDPOINTS = {
-  // ── Auth ──────────────────────────────────────────────────────────────────
-  auth: {
-    login:   "/auth/login",
-    logout:  "/auth/logout",
-    refresh: "/auth/refresh",
-    me:      "/auth/me",
-  },
-
-  // ── Users ─────────────────────────────────────────────────────────────────
-  users: {
-    list:   "/users",
-    create: "/users",
-    detail: (id: string | number) => `/users/${id}`,
-    update: (id: string | number) => `/users/${id}`,
-    delete: (id: string | number) => `/users/${id}`,
-    avatar: (id: string | number) => `/users/${id}/avatar`,
-  },
-
   // ── Images (playground) ───────────────────────────────────────────────────
   images: {
     removeBackground: "/v1/images/remove-background",
     crop: "/v1/images/crop",
+    resize: "/v1/images/resize",
+    convert: "/v1/images/convert",
+    rotate: "/v1/images/rotate",
+    exif: "/v1/images/exif",
+    exifStrip: "/v1/images/exif/strip",
+    replaceBackground: "/v1/images/replace-background",
+    watermark: "/v1/images/watermark",
   },
 } as const;
