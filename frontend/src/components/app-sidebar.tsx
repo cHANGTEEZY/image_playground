@@ -3,7 +3,6 @@ import { useState } from 'react'
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -98,14 +97,6 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter>
-        <div className="flex items-center gap-2 px-4 py-2 text-sm text-muted-foreground">
-          <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium">
-            JD
-          </div>
-          <span className="truncate group-data-[collapsible=icon]:hidden">john@example.com</span>
-        </div>
-      </SidebarFooter>
     </Sidebar>
   )
 }

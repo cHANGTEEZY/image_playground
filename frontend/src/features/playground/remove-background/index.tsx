@@ -10,18 +10,29 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
+import { Switch } from "@/components/ui/switch";
+import { getErrorMessage } from "@/utils/get-error-message";
 import {
   downloadBlob,
   ImageDropzone,
   useObjectUrl,
 } from "../components/image-dropzone";
+import { CompareSlider } from "../components/compare-slider";
+import { InlineError } from "../components/inline-error";
 import { PlaygroundPageHeader } from "../components/page-header";
+import { TransparencyBackdrop } from "../components/transparency-backdrop";
 
 export default function RemoveBackgroundPage() {
   const [file, setFile] = useState<File | null>(null);
   const [result, setResult] = useState<Blob | null>(null);
+  const [extraAccurate, setExtraAccurate] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [error, setError] = useState<string | null>(null);
   const removeBackground = useRemoveBackground();
   const resultUrl = useObjectUrl(result);
+  const sourceUrl = useObjectUrl(file);
 
   async function handleProcess() {
     if (!file) {
@@ -29,16 +40,26 @@ export default function RemoveBackgroundPage() {
       return;
     }
     setResult(null);
-    const blob = await removeBackground.mutateAsync({ file });
-    setResult(blob);
-    toast.success("Background removed");
+    setError(null);
+    setProgress(0);
+    try {
+      const blob = await removeBackground.mutateAsync({
+        file,
+        extraAccurate,
+        onProgress: setProgress,
+      });
+      setResult(blob);
+      toast.success("Background removed");
+    } catch (err) {
+      setError(getErrorMessage(err));
+    }
   }
 
   return (
     <div className="space-y-6">
       <PlaygroundPageHeader
         title="Remove Background"
-        description="Upload a photo and remove the background on the server with AI (sharp + ONNX)."
+        description="Upload a photo and remove the background with high-quality AI segmentation (IS-Net medium model, guided-filter edge refinement, defringing)."
       />
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -53,9 +74,30 @@ export default function RemoveBackgroundPage() {
               onFileChange={(next) => {
                 setFile(next);
                 setResult(null);
+                setError(null);
               }}
               disabled={removeBackground.isPending}
             />
+
+            <div className="flex items-center justify-between rounded-lg border border-input px-3 py-2.5">
+              <div className="space-y-0.5">
+                <Label htmlFor="extra-accurate">Extra accurate</Label>
+                <p className="text-xs text-muted-foreground">
+                  Averages a flipped pass for cleaner edges (~2x slower)
+                </p>
+              </div>
+              <Switch
+                id="extra-accurate"
+                checked={extraAccurate}
+                onCheckedChange={setExtraAccurate}
+                disabled={removeBackground.isPending}
+              />
+            </div>
+
+            {removeBackground.isPending ? (
+              <Progress value={progress} />
+            ) : null}
+
             <Button
               type="button"
               className="w-full"
@@ -80,22 +122,32 @@ export default function RemoveBackgroundPage() {
         <Card>
           <CardHeader>
             <CardTitle>Result</CardTitle>
-            <CardDescription>Transparent PNG output</CardDescription>
+            <CardDescription>Transparent PNG output — drag to compare</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex min-h-48 items-center justify-center rounded-lg border border-dashed border-input bg-[linear-gradient(45deg,#e5e5e5_25%,transparent_25%),linear-gradient(-45deg,#e5e5e5_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#e5e5e5_75%),linear-gradient(-45deg,transparent_75%,#e5e5e5_75%)] bg-[length:16px_16px] bg-[position:0_0,0_8px,8px_-8px,-8px_0] dark:bg-[linear-gradient(45deg,#333_25%,transparent_25%),linear-gradient(-45deg,#333_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#333_75%),linear-gradient(-45deg,transparent_75%,#333_75%)]">
-              {resultUrl ? (
-                <img
-                  src={resultUrl}
-                  alt="Background removed"
-                  className="max-h-72 max-w-full object-contain"
-                />
-              ) : (
+            {resultUrl && sourceUrl ? (
+              <CompareSlider
+                beforeSrc={sourceUrl}
+                afterSrc={resultUrl}
+                transparentAfter
+                className="h-72"
+              />
+            ) : (
+              <TransparencyBackdrop>
                 <p className="px-4 text-center text-sm text-muted-foreground">
                   Processed image will appear here
                 </p>
-              )}
-            </div>
+              </TransparencyBackdrop>
+            )}
+
+            {error ? (
+              <InlineError
+                message={error}
+                onRetry={() => void handleProcess()}
+                retrying={removeBackground.isPending}
+              />
+            ) : null}
+
             <Button
               type="button"
               variant="outline"
